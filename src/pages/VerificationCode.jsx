@@ -11,7 +11,7 @@ const VerificationForm = () => {
   const handleChange = (e, index) => {
     const value = e.target.value;
 
-    // Allow only single digit input
+    // Allow only  digit input
     if (/^\d?$/.test(value)) {
       const newInputs = [...inputs];
       newInputs[index] = value;
@@ -57,14 +57,27 @@ const VerificationForm = () => {
   };
 
   // Handle paste event
-  const handlePaste = (e) => {
-    e.preventDefault(); // Prevent default paste action
-    const pasteData = e.clipboardData.getData("text").slice(0, 6);
-    const newInputs = pasteData
-      .split("")
-      .concat(Array(6 - pasteData.length).fill(""));
+  const handlePaste = (e, index) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").slice(0, 6).split("");
+
+    // Create a copy of the current inputs
+    const newInputs = [...inputs];
+
+    // Insert pasted data into the inputs starting at the specified index
+    pasteData.forEach((v, i) => {
+      if (index + i < newInputs.length) {
+        newInputs[index + i] = v;
+      }
+    });
+
     setInputs(newInputs);
-    document.getElementById("input-0").focus(); // Reset focus to the first input
+
+    // Focus on the next input after the last pasted one
+    const nextIndex = index + pasteData.length;
+    if (nextIndex < newInputs.length) {
+      document.getElementById(`input-${nextIndex}`).focus();
+    }
   };
 
   // Handle form submission
@@ -79,12 +92,9 @@ const VerificationForm = () => {
     }
 
     try {
-      const response = await axios.post(
-        "https://verification-6-digit-code-server.onrender.com/verify",
-        {
-          code,
-        }
-      );
+      const response = await axios.post("http://localhost:4000/verify", {
+        code,
+      });
       if (response.status === 200) {
         navigate("/success");
       } else {
@@ -104,16 +114,14 @@ const VerificationForm = () => {
         onSubmit={handleSubmit}
         className="flex flex-col items-center p-4 w-full max-w-md"
       >
-        <div
-          className="flex space-x-2 sm:space-x-4 md:space-x-6 mb-4"
-          onPaste={handlePaste}
-        >
+        <div className="flex space-x-2 sm:space-x-4 md:space-x-6 mb-4">
           {inputs.map((input, index) => (
             <input
               key={index}
               id={`input-${index}`}
               type="text"
               value={input}
+              onPaste={(e) => handlePaste(e, index)}
               onChange={(e) => handleChange(e, index)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-center font-semibold text-lg border-[2px] shadow-md rounded-lg focus:outline-none mb-2 ${
@@ -122,7 +130,6 @@ const VerificationForm = () => {
                   : "border-red-500 focus:border-red-600"
               }`}
               maxLength="1"
-              aria-label={`Digit ${index + 1}`}
             />
           ))}
         </div>
